@@ -1,6 +1,6 @@
 {
-  "name": "티켓북",
-  "short_name": "티켓북",
+  "name": "TIMOA",
+  "short_name": "TIMOA",
   "description": "모바일 티켓을 모으고 추억을 기록하는 나만의 티켓북",
   "start_url": "./",
   "scope": "./",

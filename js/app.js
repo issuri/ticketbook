@@ -3,6 +3,7 @@ import { processImage } from './image.js';
 import { createBackup, inspectBackup, restoreBackup } from './backup.js';
 import { recognize, parseTicketText } from './ocr.js';
 import { layerFor, rotOf, startEditor, renderDecoPng } from './deco.js';
+import { openCropper } from './crop.js';
 
 /* ───────── 상수 ───────── */
 const TYPES = {
@@ -615,8 +616,11 @@ async function renderForm(id) {
     const f = inp.files[0]; inp.value = ''; if (!f) return;
     $('#imgarea').classList.add('busy');
     try {
-      const r = await processImage(f);
-      F.image = r.full; F.thumb = r.thumb; paintImageArea();
+      const cropped = await openCropper(f); // 고른 사진을 먼저 자르기 화면에서 다듬음 (null = 취소)
+      if (cropped) {
+        const r = await processImage(cropped);
+        F.image = r.full; F.thumb = r.thumb; paintImageArea();
+      }
     } catch (err) { toast(err.message); }
     $('#imgarea').classList.remove('busy');
   };
@@ -653,6 +657,7 @@ function paintImageArea() {
   el.innerHTML = F.image
     ? `<div class="preview"><img src="${blobUrl(F.image)}" alt="티켓 미리보기">
         <div class="row"><button type="button" class="btn ghost small" data-act="pickgallery">다른 이미지</button>
+        <button type="button" class="btn ghost small" data-act="cropimage">✂️ 자르기</button>
         <button type="button" class="btn ghost small" data-act="ocr">✨ 글자 읽기 (실험)</button>
         <button type="button" class="btn ghost small" data-act="rmimage">빼기</button></div></div>`
     : `<div class="drop"><div class="drop-ico">🎟️</div><p>티켓 이미지를 붙여 주세요</p>
@@ -801,7 +806,7 @@ async function renderSettings(open) {
         <p>• 서버가 없어서 <b>기기끼리 자동 동기화되지 않아요</b>.<br>• 홈 화면 앱을 삭제하거나, Safari에서 "방문 기록 및 웹사이트 데이터 지우기"를 하면 데이터가 사라져요.<br>• 홈 화면에 추가하지 않고 Safari 탭으로만 쓰면 오래 안 열 때 iOS가 데이터를 정리할 수 있어요.<br>• 그래서 <b>백업 파일이 유일한 안전장치</b>예요.</p></details>
       </div>
     </details>
-    <p class="foot">티켓북 v1.0 · 모든 데이터는 내 기기에만 저장됩니다</p>`;
+    <p class="foot">TIMOA · 모든 데이터는 내 기기에만 저장됩니다</p>`;
   document.getElementById('bgfile').onchange = async (e) => {
     const f = e.target.files[0]; e.target.value = ''; if (!f) return;
     try {
@@ -825,7 +830,7 @@ async function startBackup() {
   const sh = openSheet('<h3>백업 파일 만드는 중…</h3><p class="muted" id="bk-p">준비 중</p>');
   try {
     const blob = await createBackup((i, n) => { const p = document.getElementById('bk-p'); if (p) p.textContent = `${i} / ${n} 파일`; });
-    const name = `ticketbook-backup-${today()}.zip`;
+    const name = `timoa-backup-${today()}.zip`;
     const file = new File([blob], name, { type: 'application/zip' });
     const canShare = !!(navigator.canShare && navigator.canShare({ files: [file] }));
     const dl = URL.createObjectURL(blob);
@@ -840,7 +845,7 @@ async function startBackup() {
     sh.querySelector('#bk-dl').onclick = () => { markDone().then(() => setTimeout(() => route(), 800)); };
     const sb = sh.querySelector('#bk-share');
     if (sb) sb.onclick = async () => {
-      try { await navigator.share({ files: [file], title: '티켓북 백업' }); await markDone(); closeOverlay(); toast('백업을 저장했어요'); route(); }
+      try { await navigator.share({ files: [file], title: 'TIMOA 백업' }); await markDone(); closeOverlay(); toast('백업을 저장했어요'); route(); }
       catch (err) { if (err.name !== 'AbortError') toast('공유에 실패했어요. 다운로드를 이용해 주세요.'); }
     };
   } catch (err) {
@@ -973,6 +978,15 @@ const acts = {
   pickcamera: () => document.getElementById('f-camera').click(),
   rmimage: () => { F.image = null; F.thumb = null; paintImageArea(); document.getElementById('ocr').innerHTML = ''; },
   ocr: runOcr,
+  cropimage: async () => {
+    if (!F?.image) return;
+    document.getElementById('imgarea').classList.add('busy');
+    try {
+      const cropped = await openCropper(F.image);
+      if (cropped) { const r = await processImage(cropped); F.image = r.full; F.thumb = r.thumb; paintImageArea(); toast('자른 사진으로 바꿨어요'); }
+    } catch (err) { toast(err.message); }
+    document.getElementById('imgarea')?.classList.remove('busy');
+  },
   addphotos: () => document.getElementById('f-photofile').click(),
   saveform: saveForm,
   cancelform: async () => {

@@ -1,10 +1,10 @@
 // 앱 파일을 기기에 저장해 오프라인에서도 실행되게 합니다. (사용자 데이터는 IndexedDB에 있고 여기엔 없음)
 // 앱 코드를 수정해 다시 올릴 때는 VERSION 숫자를 올리세요.
-const VERSION = 'v11';
+const VERSION = 'v14';
 const CACHE = `ticketbook-${VERSION}`;
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest', 'css/style.css',
-  'js/app.js', 'js/db.js', 'js/image.js', 'js/zip.js', 'js/backup.js', 'js/ocr.js', 'js/deco.js',
+  'js/app.js', 'js/db.js', 'js/image.js', 'js/zip.js', 'js/backup.js', 'js/ocr.js', 'js/deco.js', 'js/crop.js',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
 ];
 

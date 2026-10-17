@@ -58,7 +58,7 @@ export async function createBackup(onProgress) {
     outTickets.push(o);
   }
   const data = { app: 'ticketbook', version: 1, exportedAt: new Date().toISOString(), books: outBooks, customTypes: outCustoms, background: outBg, tickets: outTickets };
-  const readme = '티켓북 백업 파일입니다. 이 zip을 티켓북 앱의 [보관함 > 백업에서 복원]으로 불러오면 티켓과 사진이 되살아납니다.\r\nimages 폴더에는 등록한 티켓 이미지와 사진이 원본 그대로 들어 있습니다.\r\n';
+  const readme = 'TIMOA 백업 파일입니다. 이 zip을 TIMOA 앱의 [보관함 > 백업에서 복원]으로 불러오면 티켓과 사진이 되살아납니다.\r\nimages 폴더에는 등록한 티켓 이미지와 사진이 원본 그대로 들어 있습니다.\r\n';
   files.unshift({ name: 'data.json', blob: new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' }) });
   files.push({ name: 'README.txt', blob: new Blob([readme], { type: 'text/plain' }) });
   return makeZip(files, onProgress);
@@ -68,9 +68,9 @@ export async function createBackup(onProgress) {
 export async function inspectBackup(file) {
   const zip = await readZip(file);
   const dataBlob = await zip.blob('data.json');
-  if (!dataBlob) throw new Error('티켓북 백업 파일이 아니에요. (data.json 없음)');
+  if (!dataBlob) throw new Error('TIMOA 백업 파일이 아니에요. (data.json 없음)');
   const data = JSON.parse(await dataBlob.text());
-  if (data.app !== 'ticketbook' || !Array.isArray(data.tickets)) throw new Error('티켓북 백업 파일이 아니에요.');
+  if (data.app !== 'ticketbook' || !Array.isArray(data.tickets)) throw new Error('TIMOA 백업 파일이 아니에요.');
   const missing = [];
   for (const t of data.tickets) {
     for (const n of [t.imageFile, t.thumbFile, ...(t.photoFiles || [])]) if (n && !zip.has(n)) missing.push(n);
