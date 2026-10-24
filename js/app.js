@@ -169,6 +169,7 @@ async function route() {
   const a = parts[1] || '', b = parts[2];
   if (S.page === 'home') S.scroll = a === 'ticket' ? window.scrollY : 0;
   closeOverlay();
+  clearPageGrad();
   view.removeAttribute('style');
   document.body.dataset.page = a === 'settings' ? 'settings' : a === '' ? 'home' : 'full';
   if (a === '') renderHome();
@@ -201,15 +202,65 @@ function dtkHtml(t, base, extra = '') {
   return `<div class="dtk f-${t.deco?.frame || 'none'}"${extra}>${base}<div class="dlayer">${layerFor(t)}</div></div>`;
 }
 
+// ── NOL 티켓 스타일: 위=포스터(이미지) / 가운데=절취선 / 아래=제목·장소 + 큰 날짜 ──
+const PERF = '<div class="tperf"><span>TIMOA</span></div>';
+
+// 이미지가 포스터 칸을 못 채워도 빈 곳이 없도록, 같은 이미지를 흐리게 깔아 둔다
+const posterBg = (src) => `<div class="pbgw">${src ? `<img class="pbg" src="${src}" alt="" aria-hidden="true">` : ''}</div>`;
+
+function infoHtml(t, ty, big = false) {
+  const [y, m, d] = t.date ? t.date.split('-') : [];
+  return `<div class="tinfo${big ? ' big' : ''}">
+    <div class="tl"><em class="ttype">${esc(ty.label)}</em><b>${esc(t.title || '제목 없음')}</b>${t.place ? `<small>${esc(t.place)}</small>` : ''}</div>
+    ${t.date ? `<div class="td"><strong>${m}</strong><strong>${d}</strong><small>${y}</small></div>` : ''}
+  </div>`;
+}
+
 function cardHtml(t, i) {
-  const img = dtkHtml(t, t.thumb ? `<img class="dbase" src="${blobUrl(t.thumb)}" alt="${esc(t.title)}" loading="lazy">` : placeholder(t));
-  const sub = [fmtShort(t.date), t.place].filter(Boolean).join(' · ');
-  const d = t.date ? t.date.slice(2).replaceAll('-', '.') : '';
-  return `<a class="tcard ty-${t.type} paper-${t.style || 'cream'}" href="#/ticket/${t.id}" style="${tintStyle(t.type)}--rot:${rotOf(t.id)}deg;--i:${Math.min(i, 10)};--tx:${(rotOf(t.id) * 22) | 0}%">
-    <div class="timg">${img}</div>
-    <div class="tcap">${d ? `<em>${d}</em>` : ''}<b>${esc(t.title || '제목 없음')}</b>${t.place ? `<span>${esc(t.place)}</span>` : ''}</div>
+  const ty = typeOf(t.type);
+  const dtk = dtkHtml(t, t.thumb ? `<img class="dbase" src="${blobUrl(t.thumb)}" alt="${esc(t.title)}" loading="lazy">` : placeholder(t));
+  return `<a class="tcard nol ty-${t.type} paper-${t.style || 'cream'}" href="#/ticket/${t.id}" style="${tintStyle(t.type)}--rot:${rotOf(t.id)}deg;--i:${Math.min(i, 10)}">
+    <div class="tpart1"><div class="timg">${posterBg(t.thumb ? blobUrl(t.thumb) : '')}${dtk}</div></div>
+    ${PERF}${infoHtml(t, ty)}
   </a>`;
 }
+
+// 상세 화면 배경: 이미지의 평균 색으로 만든 위→아래 그라데이션 (이미지 안 쓰는 칸 없이 화면 전체가 티켓 색으로 채워짐)
+async function avgColor(blob) {
+  try {
+    const url = URL.createObjectURL(blob);
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+    URL.revokeObjectURL(url);
+    const c = document.createElement('canvas'); c.width = c.height = 16;
+    const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(img, 0, 0, 16, 16);
+    const px = g.getImageData(0, 0, 16, 16).data;
+    // 색이 선명한 픽셀일수록 비중을 크게 해서, 흰 글씨 영역·검은 여백에 묻히지 않고 포스터의 대표색이 나오게 함
+    const pick = (skipExtremes) => {
+      let r = 0, gg = 0, b = 0, n = 0, wsum = 0;
+      for (let i = 0; i < px.length; i += 4) {
+        const l = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
+        if (skipExtremes && (l < 30 || l > 235)) continue;
+        const sat = Math.max(px[i], px[i + 1], px[i + 2]) - Math.min(px[i], px[i + 1], px[i + 2]);
+        const w = (sat + 8) ** 2;
+        r += px[i] * w; gg += px[i + 1] * w; b += px[i + 2] * w; wsum += w; n++;
+      }
+      return n >= 12 ? [r / wsum, gg / wsum, b / wsum] : null;
+    };
+    return pick(true) || pick(false);
+  } catch { return null; }
+}
+const hexRgb = (hex) => { const n = parseInt(hex.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
+function applyPageGrad(rgb) {
+  if (!rgb) return;
+  const mix = (c, k, to) => c.map((v, i) => Math.round(v + (to[i] - v) * k));
+  let base = rgb;
+  const lum = 0.299 * base[0] + 0.587 * base[1] + 0.114 * base[2];
+  if (lum < 70) base = mix(base, 0.35, [255, 255, 255]);
+  if (lum > 200) base = mix(base, 0.3, [0, 0, 0]);
+  document.body.style.setProperty('--grad', `linear-gradient(180deg, rgb(${mix(base, 0.1, [255, 255, 255])}) 0%, rgb(${mix(base, 0.62, [0, 0, 0])}) 100%)`);
+  document.body.classList.add('detail-grad');
+}
+function clearPageGrad() { document.body.classList.remove('detail-grad'); document.body.style.removeProperty('--grad'); }
 
 /* ───────── 홈 ───────── */
 function renderHome() {
@@ -463,21 +514,28 @@ async function renderDetail(id) {
       <span><button class="link" data-act="edit" data-id="${id}">수정</button><button class="link danger" data-act="del" data-id="${id}">삭제</button></span>
     </div>
     <article id="dpage">
-      <figure class="dimg">${dtkHtml(t, bl.image ? `<img class="dbase" src="${blobUrl(bl.image)}" alt="${esc(t.title)}" data-act="zoom">` : placeholder(t), ' id="dtk"')}</figure>
-      <div class="dtools"><button class="btn small" data-act="decorate" data-id="${id}">✨ 꾸미기</button><button class="btn ghost small" data-act="exportimg" data-id="${id}">이미지로 저장</button></div>
-      <div class="dmeta">
-        <p class="pills"><span class="typepill">${ty.label}</span>${book && S.books.length > 1 ? `<span class="typepill soft">${esc(book.name)}</span>` : ''}</p>
-        <h1>${esc(t.title || '제목 없음')}</h1>
-        <dl>${[['날짜', fmtDate(t.date)], ['장소', t.place], ...rows].filter(([, v]) => v).map(([k, v]) =>
-          `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>
-        ${t.review ? `<section class="review"><h2>그날의 기록</h2><p>${esc(t.review)}</p></section>` : ''}
-        ${bl.photos.length ? `<section><h2>함께 남긴 사진</h2><div class="photos">${bl.photos.map((p) =>
-          `<img src="${blobUrl(p)}" alt="" data-act="zoom">`).join('')}</div></section>` : ''}
-        <p class="reg">${new Date(t.createdAt).toLocaleDateString('ko-KR')}에 붙인 티켓</p>
+      <div class="nolcard">
+        <div class="tpart1"><figure class="dimg">${posterBg(bl.image ? blobUrl(bl.image) : '')}${dtkHtml(t, bl.image ? `<img class="dbase" src="${blobUrl(bl.image)}" alt="${esc(t.title)}" data-act="zoom">` : placeholder(t), ' id="dtk"')}</figure></div>
+        ${PERF}${infoHtml(t, ty, true)}
+      </div>
+      <div class="dmore">
+        <div class="dtools"><button class="btn small" data-act="decorate" data-id="${id}">✨ 꾸미기</button><button class="btn ghost small" data-act="exportimg" data-id="${id}">이미지로 저장</button></div>
+        <div class="dmeta">
+          ${book && S.books.length > 1 ? `<p class="pills"><span class="typepill soft">${esc(book.name)}</span></p>` : ''}
+          ${rows.length ? `<dl>${rows.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>` : ''}
+          ${t.review ? `<section class="review"><h2>그날의 기록</h2><p>${esc(t.review)}</p></section>` : ''}
+          ${bl.photos.length ? `<section><h2>함께 남긴 사진</h2><div class="photos">${bl.photos.map((p) =>
+            `<img src="${blobUrl(p)}" alt="" data-act="zoom">`).join('')}</div></section>` : ''}
+          <p class="reg">${new Date(t.createdAt).toLocaleDateString('ko-KR')}에 붙인 티켓</p>
+        </div>
       </div>
     </article>
     ${idx > 0 ? `<button class="navarrow prev" data-act="nav" data-d="-1" aria-label="앞 장">‹</button>` : ''}
     ${idx < ids.length - 1 ? `<button class="navarrow next" data-act="nav" data-d="1" aria-label="다음 장">›</button>` : ''}`;
+  // 티켓 이미지(또는 종류색)로 화면 전체 배경을 채움
+  const tintHex = ty.custom ? ty.color : { show: '#bfaeff', sports: '#8fe3b4', movie: '#ff9f86', exhibit: '#8cc8ff', etc: '#ffd66b' }[t.type] || '#bfaeff';
+  const rgb = bl.image ? await avgColor(bl.image) : null;
+  if (S.page === 'detail' && location.hash === `#/ticket/${id}`) applyPageGrad(rgb || hexRgb(tintHex));
   // 좌우 스와이프로 페이지 넘기기. 목록은 최신순이면 오른쪽 이동 = 더 오래된 티켓
   view._nav = (d) => {
     const n = idx + d;

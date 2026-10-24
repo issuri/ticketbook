@@ -435,3 +435,51 @@ body.cropping { overflow: hidden; }
 .cp-tools .chip.on { background: #fff; color: #271f55; }
 .cp-tools .btn.ghost { background: rgba(255, 255, 255, .12); color: #fff; box-shadow: none; }
 .cp-tools .thint { color: rgba(255, 255, 255, .6); }
+
+/* ───── NOL 스타일 티켓: 포스터(이미지) + 절취선 + 제목·장소·큰 날짜 ───── */
+.tcard.nol { padding: 0; background: none; border-radius: 0; box-shadow: none; display: flex; flex-direction: column;
+  filter: drop-shadow(0 14px 12px rgba(20, 10, 60, .2)) drop-shadow(0 2px 3px rgba(20, 10, 60, .12)); }
+.tcard.nol::before, .tcard.nol::after { display: none; }
+.tpart1 { background: var(--card); padding: 10px 10px 0; border-radius: 22px 22px 0 0; }
+.nol .timg { position: relative; aspect-ratio: 3 / 4; padding: 0; display: grid; place-items: center; background: none; overflow: visible; border-radius: 14px; container-type: size; }
+.pbgw { position: absolute; inset: 0; border-radius: 14px; overflow: hidden; background: color-mix(in srgb, var(--tint, var(--t-show)) 42%, var(--card)); }
+.pbg { position: absolute; left: -12%; top: -12%; width: 124%; height: 124%; max-width: none; object-fit: cover; filter: blur(16px) saturate(1.3); }
+.tperf { position: relative; height: 40px; background: var(--card);
+  -webkit-mask: radial-gradient(circle 9px at 0 31px, #0000 97%, #000) left / 51% 100% no-repeat, radial-gradient(circle 9px at 100% 31px, #0000 97%, #000) right / 51% 100% no-repeat;
+  mask: radial-gradient(circle 9px at 0 31px, #0000 97%, #000) left / 51% 100% no-repeat, radial-gradient(circle 9px at 100% 31px, #0000 97%, #000) right / 51% 100% no-repeat; }
+.tperf span { position: absolute; left: 0; right: 0; top: 10px; text-align: center; font: 700 11px/1 var(--body); letter-spacing: .06em; color: color-mix(in srgb, var(--ink) 38%, transparent); }
+.tperf::after { content: ""; position: absolute; left: 14px; right: 14px; top: 30px; border-top: 2px dashed color-mix(in srgb, var(--ink) 22%, transparent); }
+.tinfo { background: var(--card); border-radius: 0 0 22px 22px; padding: 4px 16px 16px; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; min-height: 92px; }
+.tinfo .tl { min-width: 0; flex: 1; }
+.tinfo .ttype { display: inline-block; margin-bottom: 6px; padding: 2px 9px; border-radius: 999px; background: var(--tint, var(--t-show)); color: var(--on-tint); font: 700 .66rem/1.4 var(--body); font-style: normal; }
+.tinfo .tl b { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; font-size: .98rem; line-height: 1.28; font-weight: 700; word-break: keep-all; }
+.tinfo .tl small { display: block; margin-top: 5px; font-size: .74rem; line-height: 1.35; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tinfo .td { flex: none; text-align: right; line-height: .98; padding-top: 2px; }
+.tinfo .td strong { display: block; font-family: var(--display); font-weight: 400; font-size: 1.7rem; }
+.tinfo .td small { display: block; margin-top: 3px; font-size: .78rem; font-weight: 700; }
+.tinfo.big { padding: 8px 22px 24px; min-height: 124px; gap: 16px; }
+.tinfo.big .ttype { font-size: .76rem; margin-bottom: 8px; }
+.tinfo.big .tl b { font-size: 1.4rem; -webkit-line-clamp: 4; }
+.tinfo.big .tl small { font-size: .9rem; white-space: normal; margin-top: 8px; }
+.tinfo.big .td strong { font-size: 2.7rem; }
+.tinfo.big .td small { font-size: 1rem; }
+
+/* 상세 화면: 같은 티켓 + 아래 정보 카드, 배경은 이미지 색 그라데이션 */
+#dpage { margin-top: 8px; overflow: visible; border-radius: 0; background: none; box-shadow: none; }
+.nolcard { display: flex; flex-direction: column; filter: drop-shadow(0 18px 16px rgba(0, 0, 0, .28)) drop-shadow(0 2px 4px rgba(0, 0, 0, .15)); }
+.nolcard .tpart1 { padding: 14px 14px 0; }
+.nolcard .dimg { position: relative; margin: 0; padding: 24px 18px; border-radius: 14px; background: none; }
+.nolcard .dimg .dtk { width: min(100%, calc(66vh * var(--ar, .75))); margin: 0 auto; transform: none; }
+.nolcard .dimg .dtk.edit { transform: none; }
+.dmore { margin-top: 16px; background: var(--card); border-radius: 26px; box-shadow: 0 14px 24px -14px rgba(0, 0, 0, .4); overflow: hidden; }
+.dmore .dtools { padding: 18px 22px 0; }
+.dmore .dmeta { padding: 14px 22px 28px; }
+.dmore .dmeta > :first-child { margin-top: 0; }
+.decoing .dmore, .decoing .tperf, .decoing .tinfo { display: none; }
+.decoing .nolcard .tpart1 { border-radius: 22px; padding-bottom: 14px; }
+body.detail-grad { background: var(--grad) fixed; }
+body.detail-grad::before, body.detail-grad::after { display: none; }
+.detail-grad .dbar { background: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.nol .timg .pbgw > img.pbg, .dimg .pbgw > img.pbg { position: absolute; left: -12%; top: -12%; width: 124%; height: 124%; max-width: none; object-fit: cover; filter: blur(16px) saturate(1.3); border-radius: 0; }
+.nol .timg .pbgw > img.pbg, .dimg .pbgw > img.pbg { max-height: none; min-height: 0; box-shadow: none; transform: none; border: 0; pointer-events: none; cursor: default; }
+.tperf, .tinfo { margin-top: -1px; }
