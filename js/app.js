@@ -127,9 +127,11 @@ async function loadAll() {
   S.tickets = tickets;
   S.books = books.sort((a, b) => a.createdAt - b.createdAt);
   if (!S.books.length) {
-    const b = { id: DB.uid(), name: '나의 티켓북', color: COVER_COLORS[0], emoji: '🎫', cover: null, createdAt: Date.now() };
+    const b = { id: DB.uid(), name: '티모아', color: COVER_COLORS[0], emoji: '🎫', cover: null, createdAt: Date.now() };
     await DB.putBook(b); S.books = [b];
   }
+  // 예전 기본 이름("나의 티켓북")을 앱 이름으로 바꿈 (직접 이름을 고친 티켓북은 그대로 둠)
+  for (const b of S.books) if (b.name === '나의 티켓북') { b.name = '티모아'; await DB.putBook(b); }
   S.customs = (await DB.metaGet('customTypes')) || [];
   S.bg = (await DB.metaGet('background')) || { color: null, image: null, veil: 55 };
   applyBackground();
@@ -353,7 +355,18 @@ function updateList() {
     chips += `<div class="chips small"><button class="chip ${S.month === 'all' ? 'on' : ''}" data-month="all">전체 월</button>${months.map((m) =>
       `<button class="chip ${S.month === m ? 'on' : ''}" data-month="${m}">${m}월</button>`).join('')}</div>`;
   }
+  // 칩을 다시 그려도 가로 스크롤 위치를 유지하고, 선택한 칩이 가려져 있으면 보이는 곳까지만 옮긴다
+  const prevScroll = [...el('chips').querySelectorAll('.chips')].map((r) => r.scrollLeft);
   el('chips').innerHTML = bt.length ? chips : '';
+  el('chips').querySelectorAll('.chips').forEach((row, i) => {
+    row.scrollLeft = prevScroll[i] || 0;
+    const on = row.querySelector('.chip.on');
+    if (on) {
+      const r = row.getBoundingClientRect(), c = on.getBoundingClientRect();
+      if (c.right > r.right - 8) row.scrollLeft += c.right - r.right + 16;
+      else if (c.left < r.left + 8) row.scrollLeft -= r.left - c.left + 16;
+    }
+  });
 
   // 목록
   if (!bt.length) {
